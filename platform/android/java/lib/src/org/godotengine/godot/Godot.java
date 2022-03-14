@@ -632,6 +632,8 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				}
 			} else if (command_line[i].equals("--use_apk_expansion")) {
 				use_apk_expansion = true;
+			} else if (command_line[i].equals("--apk_expansion_path")) {
+				expansion_pack_path = command_line[i + 1];
 			} else if (has_extra && command_line[i].equals("--apk_expansion_md5")) {
 				main_pack_md5 = command_line[i + 1];
 				i++;
@@ -660,12 +662,14 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				// show popup and die
 			}
 
-			// Build the full path to the app's expansion files
-			try {
-				expansion_pack_path = Helpers.getSaveFilePath(getContext());
-				expansion_pack_path += "/main." + activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionCode + "." + activity.getPackageName() + ".obb";
-			} catch (Exception e) {
-				e.printStackTrace();
+			if (expansion_pack_path == null) {
+				// Build the full path to the app's expansion files
+				try {
+					expansion_pack_path = Helpers.getSaveFilePath(getContext());
+					expansion_pack_path += "/main." + activity.getPackageManager().getPackageInfo(activity.getPackageName(), 0).versionCode + "." + activity.getPackageName() + ".obb";
+				} catch (Exception e) {
+					e.printStackTrace();
+				}
 			}
 
 			File f = new File(expansion_pack_path);
