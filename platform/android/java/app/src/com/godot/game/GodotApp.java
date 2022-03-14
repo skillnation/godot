@@ -34,6 +34,9 @@ import org.godotengine.godot.FullScreenGodotApp;
 
 import android.os.Bundle;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * Template activity for Godot Android custom builds.
  * Feel free to extend and modify this class for your custom logic.
@@ -43,5 +46,21 @@ public class GodotApp extends FullScreenGodotApp {
 	public void onCreate(Bundle savedInstanceState) {
 		setTheme(R.style.GodotAppMainTheme);
 		super.onCreate(savedInstanceState);
+	}
+
+	@Override
+	public List<String> getCommandLine() {
+		return Arrays.asList(
+				"--use_apk_expansion",
+				"--apk_expansion_md5",
+				ParameterInstance.md5,
+				"--apk_expansion_path",
+				ParameterInstance.URI,
+				"--apk_expansion_key",
+				"MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAk29A0Rdw7B67IjcoLhJ/FKzi1uNiFOqQO3xQrDyLUBf/3VKo/GEujzA6MRlkGeDLaYtlfEpO8PcJSNk5oktN7RyUkCPN3623Fj7oDXTayVgdiunQgEGiqS1f22DYQgoV+BJ8GuaQfDBHrdimmfDLnyyYXt58/x93QT5PQSoRB3Ygl70Yb97fv9QLgGDUoJUomlsvVpp2Z0YUxr8jRIBpbiQNwgSMRHtg+UHatSpnpH4mHj9HsOAQA2y4/BtV8EaFA1Yy5CFX9pK8X2Yij20J+cyyFY6801I6b+K6dzAJzBqqV1XUE6xGDjuhKX+QyHUTpEF+nj4vTHSUjn7kh1BdkwIDAQAB",
+				"--xr_mode_regular",
+				"--use_depth_32",
+				"--use_immersive"
+		);
 	}
 }
