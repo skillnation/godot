@@ -798,6 +798,7 @@ Error Main::setup(const char *execpath, int argc, char *argv[], bool p_second_ph
 		} else if (I->get() == "--main-pack") {
 			if (I->next()) {
 				main_pack = I->next()->get();
+                OS::get_singleton()->print("Got main pack via arg: %s\n", main_pack.utf8().get_data());
 				N = I->next()->next();
 			} else {
 				OS::get_singleton()->print("Missing path to main pack file, aborting.\n");

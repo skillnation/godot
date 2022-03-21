@@ -35,6 +35,7 @@
 #import <OpenGLES/ES1/glext.h>
 #import <UIKit/UIKit.h>
 
+#if !defined(SKIP_GODOT_VIEW_HEADER)
 class String;
 
 @class GodotView;
@@ -71,3 +72,4 @@ class String;
 - (void)godotTouchesCancelled:(NSSet *)touches withEvent:(UIEvent *)event;
 
 @end
+#endif

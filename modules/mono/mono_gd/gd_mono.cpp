@@ -962,7 +962,7 @@ void GDMono::_load_api_assemblies() {
 			}
 #endif
 
-			CRASH_NOW();
+//			CRASH_NOW();
 		} else {
 			CRASH_NOW_MSG("Failed to load one of the API assemblies.");
 		}

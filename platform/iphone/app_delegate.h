@@ -37,4 +37,7 @@
 @property(strong, nonatomic) UIWindow *window;
 @property(strong, class, readonly, nonatomic) ViewController *viewController;
 
++ (void)setViewController:(ViewController *)viewController;
+- (void)onAudioInterruption:(NSNotification *)notification;
+
 @end

@@ -55,6 +55,10 @@ static ViewController *mainViewController = nil;
 	return mainViewController;
 }
 
++ (void)setViewController:(ViewController *)viewController {
+    mainViewController = viewController;
+}
+
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
 	// Create a full-screen window
 	CGRect windowBounds = [[UIScreen mainScreen] bounds];

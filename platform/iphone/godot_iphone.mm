@@ -93,14 +93,19 @@ int iphone_main(int argc, char **argv, String data_dir) {
 	os = new OSIPhone(data_dir);
 
 	char *fargv[64];
+    printf("Arg count: %i\n", argc);
 	for (int i = 0; i < argc; i++) {
 		fargv[i] = argv[i];
+        if (argv[i] != NULL) {
+            printf("Argv: %s\n", argv[i]);
+        }
 	}
 	fargv[argc] = NULL;
 	argc = add_path(argc, fargv);
 	argc = add_cmdline(argc, fargv);
 
 	printf("os created\n");
+    printf("stange arg: %s\n", fargv[1]);
 	Error err = Main::setup(fargv[0], argc - 1, &fargv[1], false);
 	printf("setup %i\n", err);
 	if (err != OK) {
