@@ -29,4 +29,6 @@
 /*************************************************************************/
 
 #include <alloca.h>
+#ifdef ANDROID_ENABLED
 #include <malloc.h>
+#endif
