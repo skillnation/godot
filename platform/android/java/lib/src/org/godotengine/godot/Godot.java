@@ -109,22 +109,10 @@ import java.util.Locale;
 
 import javax.microedition.khronos.opengles.GL10;
 
-public class Godot extends Fragment implements SensorEventListener, IDownloaderClient {
+public class Godot extends FrameLayout implements SensorEventListener {
 	static final int MAX_SINGLETONS = 64;
 	private IStub mDownloaderClientStub;
-	private TextView mStatusText;
-	private TextView mProgressFraction;
-	private TextView mProgressPercent;
-	private TextView mAverageSpeed;
-	private TextView mTimeRemaining;
-	private ProgressBar mPB;
 	private ClipboardManager mClipboard;
-
-	private View mDashboard;
-	private View mCellMessage;
-
-	private Button mPauseButton;
-	private Button mWiFiSettingsButton;
 
 	private XRMode xrMode = XRMode.REGULAR;
 	private boolean use_32_bits = false;
@@ -143,25 +131,26 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 
 	static private Intent mCurrentIntent;
 
+	private final Activity activity;
+	private String expansion_pack_path;
+
+	public Godot(@NonNull Context context, Activity activity) {
+		this(context, activity, null);
+	}
+
+	public Godot(@NonNull Context context, Activity activity, @Nullable String expansionPackPath) {
+		super(context);
+		this.activity = activity;
+		this.godotHost = (GodotHost)activity;
+		this.expansion_pack_path = expansionPackPath;
+	}
+
 	public void onNewIntent(Intent intent) {
 		mCurrentIntent = intent;
 	}
 
 	static public Intent getCurrentIntent() {
 		return mCurrentIntent;
-	}
-
-	private void setState(int newState) {
-		if (mState != newState) {
-			mState = newState;
-			mStatusText.setText(Helpers.getDownloaderStringResourceIDFromState(newState));
-		}
-	}
-
-	private void setButtonPausedState(boolean paused) {
-		mStatePaused = paused;
-		int stringResourceID = paused ? R.string.text_button_resume : R.string.text_button_pause;
-		mPauseButton.setText(stringResourceID);
 	}
 
 	static public class SingletonBase {
@@ -242,7 +231,6 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private String[] command_line;
 	private boolean use_apk_expansion;
 
-	private ViewGroup containerLayout;
 	public GodotView mView;
 	private boolean godot_initialized = false;
 
@@ -263,54 +251,64 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	}
 	public ResultCallback result_callback;
 
-	@Override
-	public void onAttach(Context context) {
-		super.onAttach(context);
-		if (getParentFragment() instanceof GodotHost) {
-			godotHost = (GodotHost)getParentFragment();
-		} else if (getActivity() instanceof GodotHost) {
-			godotHost = (GodotHost)getActivity();
-		}
+//	@Override
+//	public void onAttach(Context context) {
+//		super.onAttach(context);
+//		if (getParentFragment() instanceof GodotHost) {
+//			godotHost = (GodotHost)getParentFragment();
+//		} else if (getActivity() instanceof GodotHost) {
+//			godotHost = (GodotHost)getActivity();
+//		}
+//	}
+
+	public Activity getActivity() {
+		return activity;
 	}
 
 	@Override
-	public void onDetach() {
-		super.onDetach();
+	public void onDetachedFromWindow() {
+		super.onDetachedFromWindow();
 		godotHost = null;
 	}
 
-	@CallSuper
 	@Override
-	public void onActivityResult(int requestCode, int resultCode, Intent data) {
-		super.onActivityResult(requestCode, resultCode, data);
-		if (result_callback != null) {
-			result_callback.callback(requestCode, resultCode, data);
-			result_callback = null;
-		}
-
-		for (int i = 0; i < singleton_count; i++) {
-			singletons[i].onMainActivityResult(requestCode, resultCode, data);
-		}
-		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
-			plugin.onMainActivityResult(requestCode, resultCode, data);
-		}
+	protected void onAttachedToWindow() {
+		super.onAttachedToWindow();
+		this.onCreate(null);
 	}
 
-	@CallSuper
-	@Override
-	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
-		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-		for (int i = 0; i < singleton_count; i++) {
-			singletons[i].onMainRequestPermissionsResult(requestCode, permissions, grantResults);
-		}
-		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
-			plugin.onMainRequestPermissionsResult(requestCode, permissions, grantResults);
-		}
-
-		for (int i = 0; i < permissions.length; i++) {
-			GodotLib.requestPermissionResult(permissions[i], grantResults[i] == PackageManager.PERMISSION_GRANTED);
-		}
-	}
+	//	@CallSuper
+//	@Override
+//	public void onActivityResult(int requestCode, int resultCode, Intent data) {
+//		super.onActivityResult(requestCode, resultCode, data);
+//		if (result_callback != null) {
+//			result_callback.callback(requestCode, resultCode, data);
+//			result_callback = null;
+//		}
+//
+//		for (int i = 0; i < singleton_count; i++) {
+//			singletons[i].onMainActivityResult(requestCode, resultCode, data);
+//		}
+//		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
+//			plugin.onMainActivityResult(requestCode, resultCode, data);
+//		}
+//	}
+//
+//	@CallSuper
+//	@Override
+//	public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+//		super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+//		for (int i = 0; i < singleton_count; i++) {
+//			singletons[i].onMainRequestPermissionsResult(requestCode, permissions, grantResults);
+//		}
+//		for (GodotPlugin plugin : pluginRegistry.getAllPlugins()) {
+//			plugin.onMainRequestPermissionsResult(requestCode, permissions, grantResults);
+//		}
+//
+//		for (int i = 0; i < permissions.length; i++) {
+//			GodotLib.requestPermissionResult(permissions[i], grantResults[i] == PackageManager.PERMISSION_GRANTED);
+//		}
+//	}
 
 	/**
 	 * Invoked on the render thread when the Godot setup is complete.
@@ -347,19 +345,17 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private void onVideoInit() {
 		boolean use_gl3 = getGLESVersionCode() >= 0x00030000;
 
-		final Activity activity = getActivity();
-		containerLayout = new FrameLayout(activity);
-		containerLayout.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+		this.setLayoutParams(new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 
 		// GodotEditText layout
 		GodotEditText edittext = new GodotEditText(activity);
 		edittext.setLayoutParams(new ViewGroup.LayoutParams(LayoutParams.MATCH_PARENT,
 				(int)getResources().getDimension(R.dimen.text_edit_height)));
 		// ...add to FrameLayout
-		containerLayout.addView(edittext);
+		this.addView(edittext);
 
 		mView = new GodotView(activity, this, xrMode, use_gl3, use_32_bits, use_debug_opengl, translucent);
-		containerLayout.addView(mView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
+		this.addView(mView, new LayoutParams(LayoutParams.MATCH_PARENT, LayoutParams.MATCH_PARENT));
 		edittext.setView(mView);
 		io.setEdit(edittext);
 
@@ -388,7 +384,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				for (int i = 0; i < singleton_count; i++) {
 					View view = singletons[i].onMainCreateView(activity);
 					if (view != null) {
-						containerLayout.addView(view);
+						this.addView(view);
 					}
 				}
 			});
@@ -399,9 +395,9 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 			View pluginView = plugin.onMainCreate(activity);
 			if (pluginView != null) {
 				if (plugin.shouldBeOnTop()) {
-					containerLayout.addView(pluginView);
+					this.addView(pluginView);
 				} else {
-					containerLayout.addView(pluginView, 0);
+					this.addView(pluginView, 0);
 				}
 			}
 		}
@@ -410,9 +406,9 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	public void setKeepScreenOn(final boolean p_enabled) {
 		runOnUiThread(() -> {
 			if (p_enabled) {
-				getActivity().getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+				activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 			} else {
-				getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+				activity.getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 			}
 		});
 	}
@@ -444,7 +440,6 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	}
 
 	public void alert(final String message, final String title) {
-		final Activity activity = getActivity();
 		runOnUiThread(() -> {
 			AlertDialog.Builder builder = new AlertDialog.Builder(activity);
 			builder.setMessage(message).setTitle(title);
@@ -481,7 +476,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	private String[] parseCommandLine() {
 		InputStream is;
 		try {
-			is = getActivity().getAssets().open("_cl_");
+			is = activity.getAssets().open("_cl_");
 			byte[] len = new byte[4];
 			int r = is.read(len);
 			if (r < 4) {
@@ -537,8 +532,6 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		return xrMode.inputFallbackMapping;
 	}
 
-	String expansion_pack_path;
-
 	private void initializeGodot() {
 		if (expansion_pack_path != null) {
 			String[] new_cmdline;
@@ -558,7 +551,6 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 			command_line = new_cmdline;
 		}
 
-		final Activity activity = getActivity();
 		io = new GodotIO(activity);
 		GodotLib.io = io;
 		netUtils = new GodotNetUtils(activity);
@@ -579,17 +571,10 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		godot_initialized = true;
 	}
 
-	@Override
-	public void onServiceConnected(Messenger m) {
-		IDownloaderService remoteService = DownloaderServiceMarshaller.CreateProxy(m);
-		remoteService.onClientUpdated(mDownloaderClientStub.getMessenger());
-	}
-
-	@Override
+	//	@Override
 	public void onCreate(Bundle icicle) {
-		super.onCreate(icicle);
+//		super.onCreate(icicle);
 
-		final Activity activity = getActivity();
 		Window window = activity.getWindow();
 		window.addFlags(WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON);
 		mClipboard = (ClipboardManager)activity.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -622,11 +607,11 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // check if the application runs on an android 4.4+
 					window.getDecorView().setSystemUiVisibility(
 							View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-							View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
-							View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
-							View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+									View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+									View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+									View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
+									View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
+									View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 
 					UiChangeListener();
 				}
@@ -704,8 +689,8 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 					if (startResult != DownloaderClientMarshaller.NO_DOWNLOAD_REQUIRED) {
 						// This is where you do set up to display the download
 						// progress (next step in onCreateView)
-						mDownloaderClientStub = DownloaderClientMarshaller.CreateStub(this,
-								GodotDownloaderService.class);
+/*						mDownloaderClientStub = DownloaderClientMarshaller.CreateStub(this,
+								GodotDownloaderService.class);*/
 
 						return;
 					}
@@ -720,29 +705,7 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		initializeGodot();
 	}
 
-	@Override
-	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle icicle) {
-		if (mDownloaderClientStub != null) {
-			View downloadingExpansionView =
-					inflater.inflate(R.layout.downloading_expansion, container, false);
-			mPB = (ProgressBar)downloadingExpansionView.findViewById(R.id.progressBar);
-			mStatusText = (TextView)downloadingExpansionView.findViewById(R.id.statusText);
-			mProgressFraction = (TextView)downloadingExpansionView.findViewById(R.id.progressAsFraction);
-			mProgressPercent = (TextView)downloadingExpansionView.findViewById(R.id.progressAsPercentage);
-			mAverageSpeed = (TextView)downloadingExpansionView.findViewById(R.id.progressAverageSpeed);
-			mTimeRemaining = (TextView)downloadingExpansionView.findViewById(R.id.progressTimeRemaining);
-			mDashboard = downloadingExpansionView.findViewById(R.id.downloaderDashboard);
-			mCellMessage = downloadingExpansionView.findViewById(R.id.approveCellular);
-			mPauseButton = (Button)downloadingExpansionView.findViewById(R.id.pauseButton);
-			mWiFiSettingsButton = (Button)downloadingExpansionView.findViewById(R.id.wifiSettingsButton);
-
-			return downloadingExpansionView;
-		}
-
-		return containerLayout;
-	}
-
-	@Override
+//	@Override
 	public void onDestroy() {
 		for (int i = 0; i < singleton_count; i++) {
 			singletons[i].onMainDestroy();
@@ -753,19 +716,19 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 
 		GodotLib.ondestroy();
 
-		super.onDestroy();
+//		super.onDestroy();
 
 		forceQuit();
 	}
 
-	@Override
+//	@Override
 	public void onPause() {
-		super.onPause();
+//		super.onPause();
 		activityResumed = false;
 
 		if (!godot_initialized) {
 			if (null != mDownloaderClientStub) {
-				mDownloaderClientStub.disconnect(getActivity());
+				mDownloaderClientStub.disconnect(activity);
 			}
 			return;
 		}
@@ -797,13 +760,13 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		mClipboard.setPrimaryClip(clip);
 	}
 
-	@Override
+//	@Override
 	public void onResume() {
-		super.onResume();
+//		super.onResume();
 		activityResumed = true;
 		if (!godot_initialized) {
 			if (null != mDownloaderClientStub) {
-				mDownloaderClientStub.connect(getActivity());
+				mDownloaderClientStub.connect(activity);
 			}
 			return;
 		}
@@ -816,14 +779,14 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		mSensorManager.registerListener(this, mGyroscope, SensorManager.SENSOR_DELAY_GAME);
 
 		if (use_immersive && Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) { // check if the application runs on an android 4.4+
-			Window window = getActivity().getWindow();
+			Window window = activity.getWindow();
 			window.getDecorView().setSystemUiVisibility(
 					View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-					View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-					View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-					View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
-					View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
-					View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+							View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+							View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+							View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | // hide nav bar
+							View.SYSTEM_UI_FLAG_FULLSCREEN | // hide status bar
+							View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 		}
 
 		for (int i = 0; i < singleton_count; i++) {
@@ -835,17 +798,17 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	}
 
 	public void UiChangeListener() {
-		final View decorView = getActivity().getWindow().getDecorView();
+		final View decorView = activity.getWindow().getDecorView();
 		decorView.setOnSystemUiVisibilityChangeListener(visibility -> {
 			if ((visibility & View.SYSTEM_UI_FLAG_FULLSCREEN) == 0) {
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
 					decorView.setSystemUiVisibility(
 							View.SYSTEM_UI_FLAG_LAYOUT_STABLE |
-							View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
-							View.SYSTEM_UI_FLAG_FULLSCREEN |
-							View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
+									View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION |
+									View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+									View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+									View.SYSTEM_UI_FLAG_FULLSCREEN |
+									View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY);
 				}
 			}
 		});
@@ -854,15 +817,15 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	@Override
 	public void onSensorChanged(SensorEvent event) {
 		Display display =
-				((WindowManager)getActivity().getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
+				((WindowManager)activity.getSystemService(WINDOW_SERVICE)).getDefaultDisplay();
 		int displayRotation = display.getRotation();
 
 		float[] adjustedValues = new float[3];
 		final int[][] axisSwap = {
-			{ 1, -1, 0, 1 }, // ROTATION_0
-			{ -1, -1, 1, 0 }, // ROTATION_90
-			{ -1, 1, 0, 1 }, // ROTATION_180
-			{ 1, 1, 1, 0 }
+				{ 1, -1, 0, 1 }, // ROTATION_0
+				{ -1, -1, 1, 0 }, // ROTATION_90
+				{ -1, 1, 0, 1 }, // ROTATION_180
+				{ 1, 1, 1, 0 }
 		}; // ROTATION_270
 
 		final int[] as = axisSwap[displayRotation];
@@ -945,8 +908,8 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 	}
 
 	public final void runOnUiThread(@NonNull Runnable action) {
-		if (getActivity() != null) {
-			getActivity().runOnUiThread(action);
+		if (activity != null) {
+			activity.runOnUiThread(action);
 		}
 	}
 
@@ -958,152 +921,24 @@ public class Godot extends Fragment implements SensorEventListener, IDownloaderC
 		}
 	}
 
+//	NOTE: the md5 check has been disabled for now
 	private boolean obbIsCorrupted(String f, String main_pack_md5) {
-		try {
-			InputStream fis = new FileInputStream(f);
-
-			// Create MD5 Hash
-			byte[] buffer = new byte[16384];
-
-			MessageDigest complete = MessageDigest.getInstance("MD5");
-			int numRead;
-			do {
-				numRead = fis.read(buffer);
-				if (numRead > 0) {
-					complete.update(buffer, 0, numRead);
-				}
-			} while (numRead != -1);
-
-			fis.close();
-			byte[] messageDigest = complete.digest();
-
-			// Create Hex String
-			StringBuilder hexString = new StringBuilder();
-			for (int i = 0; i < messageDigest.length; i++) {
-				String s = Integer.toHexString(0xFF & messageDigest[i]);
-
-				if (s.length() == 1) {
-					s = "0" + s;
-				}
-				hexString.append(s);
-			}
-			String md5str = hexString.toString();
-
-			if (!md5str.equals(main_pack_md5)) {
-				return true;
-			}
-			return false;
-		} catch (Exception e) {
-			e.printStackTrace();
-			return true;
-		}
+		return false;
+//		}
 	}
 
 	public boolean requestPermission(String p_name) {
-		return PermissionsUtil.requestPermission(p_name, getActivity());
+		return PermissionsUtil.requestPermission(p_name, activity);
 	}
 
 	public boolean requestPermissions() {
-		return PermissionsUtil.requestManifestPermissions(getActivity());
+		return PermissionsUtil.requestManifestPermissions(activity);
 	}
 
 	public String[] getGrantedPermissions() {
-		return PermissionsUtil.getGrantedPermissions(getActivity());
+		return PermissionsUtil.getGrantedPermissions(activity);
 	}
 
-	/**
-	 * The download state should trigger changes in the UI --- it may be useful
-	 * to show the state as being indeterminate at times. This sample can be
-	 * considered a guideline.
-	 */
-	@Override
-	public void onDownloadStateChanged(int newState) {
-		setState(newState);
-		boolean showDashboard = true;
-		boolean showCellMessage = false;
-		boolean paused;
-		boolean indeterminate;
-		switch (newState) {
-			case IDownloaderClient.STATE_IDLE:
-				// STATE_IDLE means the service is listening, so it's
-				// safe to start making remote service calls.
-				paused = false;
-				indeterminate = true;
-				break;
-			case IDownloaderClient.STATE_CONNECTING:
-			case IDownloaderClient.STATE_FETCHING_URL:
-				showDashboard = true;
-				paused = false;
-				indeterminate = true;
-				break;
-			case IDownloaderClient.STATE_DOWNLOADING:
-				paused = false;
-				showDashboard = true;
-				indeterminate = false;
-				break;
-
-			case IDownloaderClient.STATE_FAILED_CANCELED:
-			case IDownloaderClient.STATE_FAILED:
-			case IDownloaderClient.STATE_FAILED_FETCHING_URL:
-			case IDownloaderClient.STATE_FAILED_UNLICENSED:
-				paused = true;
-				showDashboard = false;
-				indeterminate = false;
-				break;
-			case IDownloaderClient.STATE_PAUSED_NEED_CELLULAR_PERMISSION:
-			case IDownloaderClient.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION:
-				showDashboard = false;
-				paused = true;
-				indeterminate = false;
-				showCellMessage = true;
-				break;
-
-			case IDownloaderClient.STATE_PAUSED_BY_REQUEST:
-				paused = true;
-				indeterminate = false;
-				break;
-			case IDownloaderClient.STATE_PAUSED_ROAMING:
-			case IDownloaderClient.STATE_PAUSED_SDCARD_UNAVAILABLE:
-				paused = true;
-				indeterminate = false;
-				break;
-			case IDownloaderClient.STATE_COMPLETED:
-				showDashboard = false;
-				paused = false;
-				indeterminate = false;
-				initializeGodot();
-				return;
-			default:
-				paused = true;
-				indeterminate = true;
-				showDashboard = true;
-		}
-		int newDashboardVisibility = showDashboard ? View.VISIBLE : View.GONE;
-		if (mDashboard.getVisibility() != newDashboardVisibility) {
-			mDashboard.setVisibility(newDashboardVisibility);
-		}
-		int cellMessageVisibility = showCellMessage ? View.VISIBLE : View.GONE;
-		if (mCellMessage.getVisibility() != cellMessageVisibility) {
-			mCellMessage.setVisibility(cellMessageVisibility);
-		}
-
-		mPB.setIndeterminate(indeterminate);
-		setButtonPausedState(paused);
-	}
-
-	@Override
-	public void onDownloadProgress(DownloadProgressInfo progress) {
-		mAverageSpeed.setText(getString(R.string.kilobytes_per_second,
-				Helpers.getSpeedString(progress.mCurrentSpeed)));
-		mTimeRemaining.setText(getString(R.string.time_remaining,
-				Helpers.getTimeRemaining(progress.mTimeRemaining)));
-
-		mPB.setMax((int)(progress.mOverallTotal >> 8));
-		mPB.setProgress((int)(progress.mOverallProgress >> 8));
-		mProgressPercent.setText(String.format(Locale.ENGLISH, "%d %%", progress.mOverallProgress * 100 / progress.mOverallTotal));
-		mProgressFraction.setText(Helpers.getDownloadProgressString(progress.mOverallProgress,
-				progress.mOverallTotal));
-	}
 	public void initInputDevices() {
 		mView.initInputDevices();
 	}

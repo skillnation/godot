@@ -30,9 +30,10 @@
 
 package com.godot.game;
 
-import org.godotengine.godot.FullScreenGodotApp;
-
+import android.app.Activity;
 import android.os.Bundle;
+
+import org.godotengine.godot.GodotHost;
 
 import java.util.Arrays;
 import java.util.List;
@@ -41,7 +42,7 @@ import java.util.List;
  * Template activity for Godot Android custom builds.
  * Feel free to extend and modify this class for your custom logic.
  */
-public class GodotApp extends FullScreenGodotApp {
+public class GodotApp extends Activity implements GodotHost {
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
 		setTheme(R.style.GodotAppMainTheme);
